@@ -74,16 +74,9 @@ angular.module( "opengarage.utils", [] )
                 $q = $q || $injector.get( "$q" );
 				$http = $http || $injector.get( "$http" );
 
-				var baseUrl;
-				if ( token || ( !ip && ( $rootScope.activeController && $rootScope.activeController.auth ) ) ) {
-                    baseUrl = OPENTHINGS_CLOUD_HOST + "/forward/v1/" + ( token || $rootScope.activeController.auth );
-                } else {
-				    baseUrl = "http://" + ( ip || $rootScope.activeController.ip );
-                }
-
                 return $http( {
                     method: "GET",
-                    url: baseUrl + "/jc",
+                    url: getBaseUrl( ip, token ) + "/jc",
                     suppressLoader: ip ? false : true
                 } ).then(
 					function( result ) {
@@ -408,6 +401,17 @@ angular.module( "opengarage.utils", [] )
 					}
 				} );
 			},
+            /**
+             * Returns the URL that requests to a controller should be relative to. If neither an IP address nor an
+             * OpenThings Cloud token are specified, the active controller will be used.
+             */
+            getBaseUrl = function( ip, token ) {
+                if ( token || ( !ip && ( $rootScope.activeController && $rootScope.activeController.auth ) ) ) {
+                    return OPENTHINGS_CLOUD_HOST + "/forward/v1/" + ( token || $rootScope.activeController.auth );
+                } else {
+                    return "http://" + ( ip || $rootScope.activeController.ip );
+                }
+            },
 			$http, $q, $filter, $ionicPopup, $ionicModal;
 
 	    if ( isFireFox ) {
@@ -514,14 +518,7 @@ angular.module( "opengarage.utils", [] )
 				callback = callback || function() {};
 				$http = $http || $injector.get( "$http" );
 
-                var baseUrl;
-                if ( auth || ( $rootScope.activeController && $rootScope.activeController.auth ) ) {
-                    baseUrl = OPENTHINGS_CLOUD_HOST + "/forward/v1/" + ( auth || $rootScope.activeController.auth );
-                } else {
-                    baseUrl = "http://" + $rootScope.activeController.ip;
-                }
-
-                $http.get( baseUrl + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&click=1" ).then(
+                $http.get( getBaseUrl() + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&click=1" ).then(
 					function() {
 						callback( true );
 					},
