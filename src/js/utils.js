@@ -1,5 +1,8 @@
 /* global angular, window */
 
+// TODO make this configurable.
+var OPENTHINGS_CLOUD_HOST = "https://cloud.test.openthings.io";
+
 // OpenGarage
 angular.module( "opengarage.utils", [] )
     .factory( "Utils", [ "$injector", "$rootScope", function( $injector, $rootScope ) {
@@ -71,51 +74,27 @@ angular.module( "opengarage.utils", [] )
                 $q = $q || $injector.get( "$q" );
 				$http = $http || $injector.get( "$http" );
 
-				var promise;
-
+				var baseUrl;
 				if ( token || ( !ip && ( $rootScope.activeController && $rootScope.activeController.auth ) ) ) {
-					promise = $q.all( {
-                        name: $http( {
-                            method: "POST",
-                            url: "https://opengarage.io/wp-admin/admin-ajax.php",
-                            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-                            data: "action=blynkCloud&path=" + encodeURIComponent( token || $rootScope.activeController.auth ) + "/project",
-                            suppressLoader: true
-                        } ),
-                        door: $http( {
-                            method: "POST",
-                            url: "https://opengarage.io/wp-admin/admin-ajax.php",
-                            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-                            data: "action=blynkCloud&path=" + encodeURIComponent( token || $rootScope.activeController.auth ) + "/get/V0",
-                            suppressLoader: true
-                        } )
-                    } );
-				} else {
-					promise = $http( {
-						method: "GET",
-						url: "http://" + ( ip || $rootScope.activeController.ip ) + "/jc",
-						suppressLoader: ip ? false : true
-					} );
-				}
+                    baseUrl = OPENTHINGS_CLOUD_HOST + "/forward/v1/" + ( token || $rootScope.activeController.auth );
+                } else {
+				    baseUrl = "http://" + ( ip || $rootScope.activeController.ip );
+                }
 
-	            return promise.then(
+                return $http( {
+                    method: "GET",
+                    url: baseUrl + "/jc",
+                    suppressLoader: ip ? false : true
+                } ).then(
 					function( result ) {
 						if ( token || ( !ip && ( $rootScope.activeController && $rootScope.activeController.auth ) ) ) {
-							if ( result.name.data === "Invalid token." ) {
+							if ( result.status !== 200 ) {
 								callback( false );
 								return;
 							}
-
-							callback( {
-								name: result.name.data.name,
-								door: parseInt( result.door.data[ 0 ] ) === 255 ? 1 : 0,
-                                lastUpdate: result.name.data.updatedAt,
-                                vehicle: undefined
-							} );
-						} else {
-							result.data.lastUpdate = new Date().getTime();
-							callback( result.data );
 						}
+						result.data.lastUpdate = new Date().getTime();
+						callback( result.data );
 					},
 					function() {
 						callback( false );
@@ -204,7 +183,7 @@ angular.module( "opengarage.utils", [] )
 
 				if ( data.token && data.token.length !== 32 ) {
 					$ionicPopup.alert( {
-						template: "<p class='center'>A valid Blynk token is required. Please verify your token and try again.</p>"
+						template: "<p class='center'>A valid OpenThings Cloud token is required. Please verify your token and try again.</p>"
 					} );
 					callback( false );
 					return;
@@ -220,9 +199,9 @@ angular.module( "opengarage.utils", [] )
 
                     $filter = $filter || $injector.get( "$filter" );
 
-					if ( result.mac ) {
-						result.ip = data.ip;
-						result.password = data.password;
+                    result.ip = data.ip;
+                    result.auth = data.token;
+                    result.password = data.password;
 
 						if ( $filter( "filter" )( $rootScope.controllers, { "mac": result.mac } ).length > 0 ) {
 							$ionicPopup.alert( {
@@ -232,49 +211,13 @@ angular.module( "opengarage.utils", [] )
 							return;
 						}
 
-						getControllerOptions( function( reply ) {
-							angular.extend( result, reply );
-							$rootScope.controllers.push( result );
-							storage.set( { controllers: JSON.stringify( $rootScope.controllers ) } );
-							$rootScope.$broadcast( "controllersUpdated" );
-							callback( true );
-						}, data.ip );
-					}
-
-					if ( data.token ) {
-						$http( {
-							method: "POST",
-							url: "https://opengarage.io/wp-admin/admin-ajax.php",
-			                headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-							data: "action=blynkCloud&path=" + data.token + "/get/V2",
-							suppressLoader: true
-						} ).then( function( reply ) {
-							if ( reply.data === "Invalid token." ) {
-								$ionicPopup.alert( {
-									template: "<p class='center'>Invalid Blynk token.</p>"
-								} );
-								callback( false );
-								return;
-							}
-
-							reply = reply.data.pop().split( " " )[ 1 ].split( "_" )[ 1 ];
-							result.mac = "5C:CF:7F:" + reply.match( /.{1,2}/g ).join( ":" );
-							result.auth = data.token;
-
-							if ( $filter( "filter" )( $rootScope.controllers, { "mac": result.mac } ).length > 0 ) {
-								$ionicPopup.alert( {
-									template: "<p class='center'>Device already added to site list.</p>"
-								} );
-								callback( false );
-								return;
-							}
-
-							$rootScope.controllers.push( result );
-							storage.set( { controllers: JSON.stringify( $rootScope.controllers ) } );
-							$rootScope.$broadcast( "controllersUpdated" );
-							callback( true );
-						} );
-					}
+					getControllerOptions( function( reply ) {
+						angular.extend( result, reply );
+						$rootScope.controllers.push( result );
+						storage.set( { controllers: JSON.stringify( $rootScope.controllers ) } );
+						$rootScope.$broadcast( "controllersUpdated" );
+						callback( true );
+					}, data.ip );
 				},
 				data.token ? null : data.ip,
 				data.token ? data.token : null
@@ -547,15 +490,15 @@ angular.module( "opengarage.utils", [] )
 					}
 				);
 			},
-			showAddBlynk: function( callback ) {
+			showAddOtc: function( callback ) {
 				callback = callback || function() {};
 				$ionicPopup = $ionicPopup || $injector.get( "$ionicPopup" );
 
 				$ionicPopup.prompt( {
-					title: "Add Controller by Blynk",
-					template: "Enter your Blynk Auth token below:",
+					title: "Add Controller by OpenThings Cloud",
+					template: "Enter your OpenThings Cloud auth token below:",
 					inputType: "text",
-					inputPlaceholder: "Your Blynk Auth token"
+					inputPlaceholder: "Your OpenThings auth token"
 				} ).then( function( token ) {
 					if ( token ) {
 						addController( { token: token }, callback );
@@ -571,30 +514,14 @@ angular.module( "opengarage.utils", [] )
 				callback = callback || function() {};
 				$http = $http || $injector.get( "$http" );
 
-				var promise;
+                var baseUrl;
+                if ( auth || ( $rootScope.activeController && $rootScope.activeController.auth ) ) {
+                    baseUrl = OPENTHINGS_CLOUD_HOST + "/forward/v1/" + ( auth || $rootScope.activeController.auth );
+                } else {
+                    baseUrl = "http://" + $rootScope.activeController.ip;
+                }
 
-				if ( auth || ( $rootScope.activeController && $rootScope.activeController.auth ) ) {
-					promise = $http( {
-						method: "POST",
-						url: "https://opengarage.io/wp-admin/admin-ajax.php",
-		                headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-						data: "action=blynkCloud&path=" + encodeURIComponent( ( auth || $rootScope.activeController.auth ) + "/update/V1?value=1" )
-					} ).then( function() {
-						setTimeout( function() {
-							$http( {
-								method: "POST",
-								url: "https://opengarage.io/wp-admin/admin-ajax.php",
-				                headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-				                suppressLoader: true,
-								data: "action=blynkCloud&path=" + encodeURIComponent( ( auth || $rootScope.activeController.auth ) + "/update/V1?value=0" )
-							} );
-						}, $rootScope.activeController.cdt || 1000 );
-					} );
-				} else {
-					promise = $http.get( "http://" + $rootScope.activeController.ip + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&click=1" );
-				}
-
-	            promise.then(
+                $http.get( baseUrl + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&click=1" ).then(
 					function() {
 						callback( true );
 					},

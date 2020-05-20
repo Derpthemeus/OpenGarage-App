@@ -155,14 +155,14 @@ angular.module( "opengarage.controllers", [ "opengarage.utils", "opengarage.clou
 			$ionicActionSheet.show( {
 				buttons: [
 					{ text: "<i class='icon ion-plus-circled'></i> Add by IP" },
-					{ text: "<i class='icon ion-network'></i> Add by Blynk Token" },
+					{ text: "<i class='icon ion-network'></i> Add by OpenThings Cloud Token" },
 					{ text: "<i class='icon ion-ios-color-wand'></i> Setup New Device" }
 				],
 				titleText: "Add Controller",
 				cancelText: "Cancel",
 				buttonClicked: function( index ) {
 					if ( index === 1 ) {
-						Utils.showAddBlynk();
+						Utils.showAddOtc();
 					} else if ( index === 0 ) {
 						Utils.showAddController();
 					} else {
