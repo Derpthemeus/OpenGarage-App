@@ -95,7 +95,7 @@ angular.module( "opengarage.utils", [] )
 				);
 	        },
 	        getControllerOptions = function( callback, ip, showLoader ) {
-				if ( ( !ip && !$rootScope.activeController ) || ( $rootScope.activeController && !$rootScope.activeController.ip ) ) {
+				if ( ( !ip && !$rootScope.activeController ) ) {
 					callback( false );
 					return;
 				}
@@ -104,7 +104,7 @@ angular.module( "opengarage.utils", [] )
 
 	            return $http( {
 	                method: "GET",
-	                url: "http://" + ( ip || $rootScope.activeController.ip ) + "/jo",
+	                url: getBaseUrl( ip ) + "/jo",
                     suppressLoader: showLoader ? false : true
 	            } ).then(
 					function( result ) {
@@ -537,7 +537,7 @@ angular.module( "opengarage.utils", [] )
 						template: "<p class='center'>Are you sure you want to restart the controller?</p>"
 					} ).then( function( result ) {
 						if ( result ) {
-							$http.get( "http://" + $rootScope.activeController.ip + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&reboot=1" );
+							$http.get( getBaseUrl() + "/cc?dkey=" + encodeURIComponent( $rootScope.activeController.password ) + "&reboot=1" );
 						}
 					} );
 				}
@@ -547,7 +547,7 @@ angular.module( "opengarage.utils", [] )
 
 	            return $http( {
 	                method: "GET",
-	                url: "http://" + $rootScope.activeController.ip + "/co?dkey=" + $rootScope.activeController.password,
+	                url: getBaseUrl() + "/co?dkey=" + $rootScope.activeController.password,
 					params: settings,
 					paramSerializer: "$httpParamSerializerJQLike"
 	            } ).then(
@@ -586,7 +586,7 @@ angular.module( "opengarage.utils", [] )
 
 		            $http( {
 		                method: "GET",
-		                url: "http://" + $rootScope.activeController.ip + "/co?dkey=" + $rootScope.activeController.password,
+		                url: getBaseUrl() + "/co?dkey=" + $rootScope.activeController.password,
 						params: scope.pwd,
 						paramSerializer: "$httpParamSerializerJQLike"
 		            } ).then( function() {
@@ -606,7 +606,7 @@ angular.module( "opengarage.utils", [] )
 				} );
 			},
 			getLogs: function( callback ) {
-				if ( !$rootScope.activeController || !$rootScope.activeController.ip ) {
+				if ( !$rootScope.activeController ) {
 					callback( false );
 					return;
 				}
@@ -615,7 +615,7 @@ angular.module( "opengarage.utils", [] )
 
 	            $http( {
 	                method: "GET",
-	                url: "http://" + $rootScope.activeController.ip + "/jl"
+	                url: getBaseUrl() + "/jl"
 	            } ).then(
 					function( result ) {
 						callback( result.data.logs.sort( function( a, b ) { return b[ 0 ] - a[ 0 ]; } ) );
